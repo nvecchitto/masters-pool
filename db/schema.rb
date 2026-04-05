@@ -10,9 +10,43 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_13_202311) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_05_000007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "golfers", force: :cascade do |t|
+    t.bigint "tournament_id", null: false
+    t.string "name", null: false
+    t.string "sportsdata_id", null: false
+    t.integer "current_score", default: 0, null: false
+    t.string "thru", default: "-"
+    t.string "status", default: "active", null: false
+    t.integer "rounds_played", default: 0, null: false
+    t.integer "position"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "odds_to_win", precision: 8, scale: 2
+    t.index ["tournament_id", "sportsdata_id"], name: "index_golfers_on_tournament_id_and_sportsdata_id", unique: true
+    t.index ["tournament_id"], name: "index_golfers_on_tournament_id"
+  end
+
+  create_table "participants", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "email", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_participants_on_email", unique: true
+  end
+
+  create_table "pools", force: :cascade do |t|
+    t.bigint "tournament_id", null: false
+    t.string "name", null: false
+    t.integer "current_pick_number", default: 1, null: false
+    t.string "draft_status", default: "predraft", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tournament_id"], name: "index_pools_on_tournament_id"
+  end
 
   create_table "solid_cable_messages", force: :cascade do |t|
     t.binary "channel", null: false
@@ -156,10 +190,49 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_13_202311) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "team_golfers", force: :cascade do |t|
+    t.bigint "team_id", null: false
+    t.bigint "golfer_id", null: false
+    t.integer "pick_number", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["golfer_id"], name: "index_team_golfers_on_golfer_id"
+    t.index ["team_id", "golfer_id"], name: "index_team_golfers_on_team_id_and_golfer_id", unique: true
+    t.index ["team_id"], name: "index_team_golfers_on_team_id"
+  end
+
+  create_table "teams", force: :cascade do |t|
+    t.bigint "pool_id", null: false
+    t.bigint "participant_id", null: false
+    t.string "name", null: false
+    t.integer "draft_order", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["participant_id"], name: "index_teams_on_participant_id"
+    t.index ["pool_id", "draft_order"], name: "index_teams_on_pool_id_and_draft_order", unique: true
+    t.index ["pool_id"], name: "index_teams_on_pool_id"
+  end
+
+  create_table "tournaments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "sportsdata_id", null: false
+    t.string "status", default: "upcoming", null: false
+    t.integer "total_rounds", default: 4, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sportsdata_id"], name: "index_tournaments_on_sportsdata_id", unique: true
+  end
+
+  add_foreign_key "golfers", "tournaments"
+  add_foreign_key "pools", "tournaments"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "team_golfers", "golfers"
+  add_foreign_key "team_golfers", "teams"
+  add_foreign_key "teams", "participants"
+  add_foreign_key "teams", "pools"
 end

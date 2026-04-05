@@ -1,0 +1,65 @@
+<%# locals: (golfers:, pool:, drafted_ids:) %>
+<%# Build a golfer_id → team lookup for badge rendering %>
+<% golfer_team_map = pool.teams.each_with_object({}) { |t, h| t.golfers.each { |g| h[g.id] = t } } %>
+
+<table class="w-full text-sm">
+  <thead>
+    <tr class="text-xs text-gray-400 uppercase tracking-wider border-b border-gray-800 sticky top-0 bg-gray-950 z-10">
+      <th class="px-4 py-3 text-left w-10">Pos</th>
+      <th class="px-4 py-3 text-left">Golfer</th>
+      <th class="px-4 py-3 text-right w-16">Score</th>
+      <th class="px-4 py-3 text-right w-14">Thru</th>
+      <th class="px-4 py-3 text-left w-28">Pool Team</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-800">
+    <% golfers.each do |golfer| %>
+      <%
+        is_drafted = drafted_ids.include?(golfer.id)
+        owning_team = golfer_team_map[golfer.id]
+        row_class = golfer.cut_or_withdrawn? ? "opacity-50" : "hover:bg-gray-800/40 transition-colors"
+      %>
+      <tr class="<%= row_class %>">
+        <%# Position %>
+        <td class="px-4 py-2.5 text-gray-400 font-mono text-xs text-center">
+          <%= golfer.position || "–" %>
+        </td>
+
+        <%# Name + status badge %>
+        <td class="px-4 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="<%= golfer.cut_or_withdrawn? ? 'text-gray-500' : 'text-white' %> font-medium">
+              <%= golfer.name %>
+            </span>
+            <% if golfer.cut_or_withdrawn? %>
+              <%= render "shared/status_badge", golfer: golfer %>
+            <% end %>
+          </div>
+        </td>
+
+        <%# Score %>
+        <td class="px-4 py-2.5 text-right font-mono">
+          <span class="<%= score_color_class(golfer.current_score) %> font-semibold">
+            <%= golfer.display_score %>
+          </span>
+        </td>
+
+        <%# Thru %>
+        <td class="px-4 py-2.5 text-right text-gray-400 font-mono text-xs">
+          <%= golfer.thru %>
+        </td>
+
+        <%# Pool Team badge %>
+        <td class="px-4 py-2.5">
+          <% if owning_team %>
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium text-white <%= owning_team.badge_color %>">
+              <span class="truncate max-w-[80px]"><%= owning_team.name %></span>
+            </span>
+          <% else %>
+            <span class="text-gray-700 text-xs">—</span>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

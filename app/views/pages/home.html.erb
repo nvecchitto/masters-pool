@@ -1,0 +1,172 @@
+<% content_for :title, "Masters Pool" %>
+
+<div class="min-h-screen bg-gray-950 text-gray-100">
+  <header class="bg-green-900 border-b border-green-700 px-6 py-5">
+    <h1 class="text-2xl font-bold text-white">Masters Pool</h1>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-6 py-12 space-y-8">
+
+    <%# Flash messages %>
+    <% if notice.present? %>
+      <p class="bg-green-900/50 border border-green-700 text-green-300 px-4 py-3 rounded-lg text-sm"><%= notice %></p>
+    <% end %>
+    <% if alert.present? %>
+      <p class="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm"><%= alert %></p>
+    <% end %>
+
+    <%# ── Existing Pools ──────────────────────────────────────────────── %>
+    <% if @pools.any? %>
+      <section>
+        <h2 class="text-lg font-semibold text-gray-200 mb-4">Your Pools</h2>
+        <ul class="space-y-3">
+          <% @pools.each do |pool| %>
+            <li class="bg-gray-900 border border-gray-800 rounded-lg px-5 py-4 flex items-center justify-between">
+              <div>
+                <p class="font-medium text-white"><%= pool.name %></p>
+                <p class="text-sm text-gray-400"><%= pool.tournament.name %></p>
+              </div>
+              <div class="flex gap-4">
+                <%= link_to "Draft", pool_draft_path(pool),
+                      class: "text-sm text-amber-400 hover:text-amber-300 font-medium transition-colors" %>
+                <%= link_to "Dashboard →", pool_dashboard_path(pool),
+                      class: "text-sm text-green-400 hover:text-green-300 font-medium transition-colors" %>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
+    <%# ── Create a Pool ───────────────────────────────────────────────── %>
+    <section class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+      <h2 class="text-base font-semibold text-gray-200 mb-5">Create a Pool</h2>
+
+      <% if @api_error %>
+        <p class="text-sm text-red-400 bg-red-900/30 border border-red-800 rounded-lg px-4 py-3 mb-4">
+          Could not reach Sportsdata.io — set <code class="bg-gray-800 px-1 rounded">SPORTSDATA_API_KEY</code> in your environment.
+        </p>
+      <% end %>
+
+      <%= tag.form action: pools_path, method: :post, class: "space-y-5" do %>
+        <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+        <%= hidden_field_tag :sportsdata_id, "" %>
+        <%= hidden_field_tag :tournament_name, "" %>
+        <%= hidden_field_tag :total_rounds, "" %>
+
+        <%# Tournament %>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Tournament</label>
+          <% if @api_tournaments.any? %>
+            <%= select_tag :api_tournament,
+                  options_for_select(
+                    @api_tournaments.map { |t|
+                      label  = t[:is_in_progress] ? "🟢 #{t[:name]}" : t[:name]
+                      label += " — #{t[:location]}" if t[:location].present?
+                      label += " (#{t[:start_date]})" if t[:start_date].present?
+                      value  = "#{t[:sportsdata_id]}|#{t[:total_rounds]}|#{t[:name]}"
+                      [label, value]
+                    }
+                  ),
+                  prompt: "Select a tournament…",
+                  id: "api_tournament_select",
+                  class: "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500 text-sm" %>
+          <% else %>
+            <p class="text-sm text-gray-500 italic">No tournaments available — check your API key.</p>
+          <% end %>
+        </div>
+
+        <%# Pool name %>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Pool name</label>
+          <%= text_field_tag :pool_name, nil,
+                placeholder: "e.g. Office Masters Pool",
+                class: "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm" %>
+        </div>
+
+        <%# Participants ─ dynamic list %>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs text-gray-400">Participants <span class="text-gray-600">(draft order = entry order)</span></label>
+            <button type="button" id="add_participant"
+                    class="text-xs text-green-400 hover:text-green-300 font-medium transition-colors">
+              + Add participant
+            </button>
+          </div>
+
+          <div id="participants_list" class="space-y-2">
+            <%# Two starter rows %>
+            <% 2.times do |i| %>
+              <div class="participant-row flex gap-2 items-center">
+                <span class="text-xs text-gray-600 w-4 text-right participant-index"><%= i + 1 %></span>
+                <%= text_field_tag "participants[][name]", nil,
+                      placeholder: "Name",
+                      class: "flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm" %>
+                <%= email_field_tag "participants[][email]", nil,
+                      placeholder: "Email (optional)",
+                      class: "flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm" %>
+                <button type="button"
+                        class="remove-participant text-gray-600 hover:text-red-400 transition-colors text-lg leading-none px-1"
+                        title="Remove">×</button>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <button type="submit"
+                class="w-full bg-green-700 hover:bg-green-600 text-white font-semibold py-2 rounded-lg text-sm transition-colors">
+          Create Pool
+        </button>
+      <% end %>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  <%# ── Tournament dropdown: unpack composite value into hidden fields ── %>
+  <% if @api_tournaments.any? %>
+    const sel = document.getElementById("api_tournament_select");
+    function syncTournament() {
+      if (!sel.value) return;
+      const [id, rounds, ...nameParts] = sel.value.split("|");
+      document.querySelector("input[name='sportsdata_id']").value = id;
+      document.querySelector("input[name='total_rounds']").value = rounds;
+      document.querySelector("input[name='tournament_name']").value = nameParts.join("|");
+    }
+    sel.addEventListener("change", syncTournament);
+    syncTournament();
+  <% end %>
+
+  <%# ── Participants: add / remove rows dynamically ── %>
+  function reindex() {
+    document.querySelectorAll(".participant-index").forEach((el, i) => {
+      el.textContent = i + 1;
+    });
+  }
+
+  document.getElementById("add_participant").addEventListener("click", function() {
+    const list = document.getElementById("participants_list");
+    const count = list.querySelectorAll(".participant-row").length + 1;
+    const row = document.createElement("div");
+    row.className = "participant-row flex gap-2 items-center";
+    row.innerHTML = `
+      <span class="text-xs text-gray-600 w-4 text-right participant-index">${count}</span>
+      <input type="text"   name="participants[][name]"  placeholder="Name"             class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm" />
+      <input type="email"  name="participants[][email]" placeholder="Email (optional)"  class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm" />
+      <button type="button" class="remove-participant text-gray-600 hover:text-red-400 transition-colors text-lg leading-none px-1" title="Remove">×</button>
+    `;
+    list.appendChild(row);
+    row.querySelector("input").focus();
+  });
+
+  document.getElementById("participants_list").addEventListener("click", function(e) {
+    if (e.target.classList.contains("remove-participant")) {
+      const rows = document.querySelectorAll(".participant-row");
+      if (rows.length > 1) {
+        e.target.closest(".participant-row").remove();
+        reindex();
+      }
+    }
+  });
+</script>

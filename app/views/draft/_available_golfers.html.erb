@@ -1,0 +1,56 @@
+<%# locals: (pool:, golfers:) %>
+<div class="bg-gray-900 rounded-lg border border-gray-800">
+  <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+    <h3 class="font-semibold text-white text-sm">Available Golfers</h3>
+    <span class="text-xs text-gray-400"><%= golfers.size %> remaining</span>
+  </div>
+
+  <% if pool.draft_complete? %>
+    <p class="px-5 py-4 text-gray-500 text-sm italic">Draft is complete.</p>
+  <% elsif golfers.none? %>
+    <div class="px-5 py-6 text-center space-y-3">
+      <p class="text-gray-400 text-sm">No golfers loaded yet — the field hasn't been synced.</p>
+      <%= button_to "Sync field from Sportsdata.io",
+            pool_draft_sync_path(pool),
+            class: "px-4 py-2 bg-green-700 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors",
+            data: { turbo: false } %>
+    </div>
+  <% else %>
+    <div class="overflow-y-auto max-h-[55vh]">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-gray-400 uppercase tracking-wider border-b border-gray-800">
+            <th class="px-5 py-2 text-left w-10">Pos</th>
+            <th class="px-5 py-2 text-left">Name</th>
+            <th class="px-5 py-2 text-right w-20">Odds</th>
+            <th class="px-5 py-2 text-right w-16">Score</th>
+            <th class="px-5 py-2 text-right w-14">Thru</th>
+            <th class="px-5 py-2 w-16"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+          <% golfers.each do |golfer| %>
+            <tr class="hover:bg-gray-800/50 transition-colors">
+              <td class="px-5 py-2 text-gray-400 font-mono text-xs"><%= golfer.position || "–" %></td>
+              <td class="px-5 py-2 text-white"><%= golfer.name %></td>
+              <td class="px-5 py-2 text-right font-mono text-xs text-amber-400">
+                <%= golfer.display_odds || "—" %>
+              </td>
+              <td class="px-5 py-2 text-right font-mono">
+                <span class="<%= score_color_class(golfer.current_score) %>"><%= golfer.display_score %></span>
+              </td>
+              <td class="px-5 py-2 text-right text-gray-400 font-mono text-xs"><%= golfer.thru %></td>
+              <td class="px-5 py-2 text-right">
+                <%= button_to "Pick",
+                      pool_draft_pick_path(pool),
+                      params: { golfer_id: golfer.id },
+                      class: "px-3 py-1 bg-green-700 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors",
+                      data: { turbo: false } %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</div>

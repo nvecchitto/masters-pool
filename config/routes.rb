@@ -1,4 +1,14 @@
 Rails.application.routes.draw do
-  # This is a blank app! Pick your first screen, build out the RCAV, and go from there. E.g.:
-  # get("/your_first_screen", { :controller => "pages", :action => "first" })
+  resources :pools, only: %i[index create] do
+    # GET  /pools/:pool_id/dashboard  → DashboardController#index
+    get  "dashboard", to: "dashboard#index", as: :dashboard
+
+    # GET  /pools/:pool_id/draft       → DraftController#show
+    # POST /pools/:pool_id/draft/pick  → DraftController#pick
+    get  "draft",      to: "draft#show", as: :draft
+    post "draft/pick", to: "draft#pick", as: :draft_pick
+    post "draft/sync", to: "draft#sync", as: :draft_sync
+  end
+
+  root "pages#home"
 end

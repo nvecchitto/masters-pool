@@ -1,0 +1,11 @@
+<%# locals: (golfer:) %>
+<% label, css = case golfer.status
+                when "cut" then ["CUT", "bg-yellow-900 text-yellow-300"]
+                when "wd"  then ["WD",  "bg-red-900 text-red-300"]
+                when "dq"  then ["DQ",  "bg-purple-900 text-purple-300"]
+                end %>
+<% if label %>
+  <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide <%= css %>">
+    <%= label %>
+  </span>
+<% end %>

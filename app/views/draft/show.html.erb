@@ -1,0 +1,66 @@
+<% content_for :title, "Draft — #{@pool.name}" %>
+
+<%# Subscribe to live draft updates broadcast by DraftController#broadcast_draft_update %>
+<%= turbo_stream_from "pool_#{@pool.id}_draft" %>
+
+<div class="min-h-screen bg-gray-950 text-gray-100">
+
+  <%# ── Header ─────────────────────────────────────────────────────────── %>
+  <header class="bg-green-900 border-b border-green-700 px-6 py-4 flex items-center justify-between">
+    <h1 class="text-xl font-bold text-white">
+      <%= @pool.name %> &mdash; Snake Draft
+    </h1>
+    <%= link_to "← Dashboard",
+          pool_dashboard_path(@pool),
+          class: "text-sm text-green-300 hover:text-white transition-colors" %>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
+
+    <%# ── LEFT: Current Picker + Available Golfers ─────────────────────── %>
+    <div class="lg:w-3/5 space-y-4">
+
+      <%# Current Picker Card — replaced by Turbo Stream on each pick %>
+      <div id="current_picker">
+        <%= render "current_picker", pool: @pool, current_team: @current_team %>
+      </div>
+
+      <%# Available Golfers — replaced by Turbo Stream on each pick %>
+      <div id="available_golfers">
+        <%= render "available_golfers", pool: @pool, golfers: @available %>
+      </div>
+    </div>
+
+    <%# ── RIGHT: Draft Board (all teams + their picks so far) ─────────── %>
+    <div class="lg:w-2/5">
+      <h2 class="text-base font-semibold text-gray-300 mb-3">Draft Board</h2>
+      <div class="space-y-3">
+        <% @teams.each do |team| %>
+          <div class="bg-gray-900 rounded-lg border border-gray-800 p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-3 h-3 rounded-full <%= team.badge_color %>"></span>
+              <span class="font-medium text-white text-sm"><%= team.name %></span>
+              <span class="text-xs text-gray-400">(<%= team.participant.name %>)</span>
+              <span class="ml-auto text-xs text-gray-500">Pick <%= team.draft_order %></span>
+            </div>
+            <% if team.golfers.any? %>
+              <ul class="space-y-1">
+                <% team.golfers.each do |golfer| %>
+                  <li class="text-sm text-gray-300 flex items-center justify-between">
+                    <span><%= golfer.name %></span>
+                    <span class="<%= score_color_class(golfer.current_score) %> font-mono text-xs">
+                      <%= golfer.display_score %>
+                    </span>
+                  </li>
+                <% end %>
+              </ul>
+            <% else %>
+              <p class="text-xs text-gray-600 italic">No picks yet</p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+  </div>
+</div>

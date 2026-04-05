@@ -1,0 +1,57 @@
+<%# locals: (teams:) %>
+<table class="w-full text-sm">
+  <thead>
+    <tr class="text-xs text-gray-400 uppercase tracking-wider border-b border-gray-800">
+      <th class="px-5 py-3 text-left w-8">#</th>
+      <th class="px-5 py-3 text-left">Team</th>
+      <th class="px-5 py-3 text-right">Score</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-800">
+    <% teams.each_with_index do |team, idx| %>
+      <tr class="hover:bg-gray-800/50 transition-colors group">
+        <td class="px-5 py-3 text-gray-400 font-mono text-xs"><%= idx + 1 %></td>
+        <td class="px-5 py-3">
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2.5 h-2.5 rounded-full <%= team.badge_color %>"></span>
+            <div>
+              <p class="font-medium text-white"><%= team.name %></p>
+              <p class="text-xs text-gray-400"><%= team.participant.name %></p>
+            </div>
+          </div>
+
+          <%# Mini roster -%>
+          <% if team.golfers.any? %>
+            <div class="mt-2 space-y-0.5 pl-4">
+              <% team.golfers.sort_by(&:pool_score).each do |golfer| %>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="<%= golfer.cut_or_withdrawn? ? 'text-gray-500 line-through' : 'text-gray-300' %>">
+                    <%= golfer.name %>
+                  </span>
+                  <div class="flex items-center gap-2">
+                    <span class="<%= score_color_class(golfer.current_score) %> font-mono">
+                      <%= golfer.display_score %>
+                    </span>
+                    <% if golfer.cut_or_withdrawn? %>
+                      <span class="text-red-400 font-mono">(pool: <%= golfer.display_pool_score %>)</span>
+                      <%= render "shared/status_badge", golfer: golfer %>
+                    <% else %>
+                      <span class="text-gray-500 text-xs">thru <%= golfer.thru %></span>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="mt-1 pl-4 text-xs text-gray-600 italic">No golfers drafted yet</p>
+          <% end %>
+        </td>
+        <td class="px-5 py-3 text-right">
+          <span class="<%= score_color_class(team.pool_score) %> font-mono font-semibold text-base">
+            <%= team.display_pool_score %>
+          </span>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

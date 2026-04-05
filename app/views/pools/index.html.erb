@@ -1,0 +1,31 @@
+<% content_for :title, "All Pools" %>
+
+<div class="min-h-screen bg-gray-950 text-gray-100">
+  <header class="bg-green-900 border-b border-green-700 px-6 py-5 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-white">All Pools</h1>
+    <%= link_to "← Home", root_path, class: "text-sm text-green-300 hover:text-white transition-colors" %>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-6 py-10">
+    <% if @pools.any? %>
+      <ul class="space-y-3">
+        <% @pools.each do |pool| %>
+          <li class="bg-gray-900 border border-gray-800 rounded-lg px-5 py-4 flex items-center justify-between">
+            <div>
+              <p class="font-medium text-white"><%= pool.name %></p>
+              <p class="text-sm text-gray-400"><%= pool.tournament.name %></p>
+            </div>
+            <div class="flex gap-4">
+              <%= link_to "Draft", pool_draft_path(pool),
+                    class: "text-sm text-amber-400 hover:text-amber-300 font-medium transition-colors" %>
+              <%= link_to "Dashboard →", pool_dashboard_path(pool),
+                    class: "text-sm text-green-400 hover:text-green-300 font-medium transition-colors" %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-gray-500 text-center py-16">No pools yet. <%= link_to "Create one →", root_path, class: "text-green-400 hover:text-green-300" %></p>
+    <% end %>
+  </main>
+</div>
