@@ -6,7 +6,7 @@ Rails.application.routes.draw do
   get    "sign_up",  to: "registrations#new",  as: :sign_up
   post   "sign_up",  to: "registrations#create"
 
-  resources :pools, only: %i[index create] do
+  resources :pools, only: %i[index create destroy] do
     member do
       post :join
       post :start_draft

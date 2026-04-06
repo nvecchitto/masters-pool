@@ -1,6 +1,6 @@
 class PoolsController < ApplicationController
-  before_action :require_login, only: %i[create join start_draft]
-  before_action :set_pool,      only: %i[join start_draft]
+  before_action :require_login, only: %i[create join start_draft destroy]
+  before_action :set_pool,      only: %i[join start_draft destroy]
 
   def index
     @pools = Pool.includes(:tournament).order(created_at: :desc)
@@ -104,6 +104,16 @@ class PoolsController < ApplicationController
     redirect_to pool_draft_path(@pool), notice: "Draft started! Good luck."
   rescue ActiveRecord::RecordInvalid => e
     redirect_to root_path, alert: e.message
+  end
+
+  # DELETE /pools/:id
+  def destroy
+    unless current_user.id == @pool.creator_id
+      return redirect_to root_path, alert: "Only the pool creator can delete this pool."
+    end
+
+    @pool.destroy!
+    redirect_to root_path, notice: "Pool deleted."
   end
 
   private

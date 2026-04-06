@@ -7,14 +7,22 @@
 <div class="min-h-screen bg-gray-950 text-gray-100">
 
   <%# ── Header ─────────────────────────────────────────────────────────── %>
-  <header class="bg-green-900 border-b border-green-700 px-6 py-4 flex items-center justify-between">
+  <header class="bg-green-900 border-b border-green-700 px-6 py-4 flex items-center justify-between gap-4">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-white"><%= @tournament.name %></h1>
       <p class="text-sm text-green-300 mt-0.5"><%= @pool.name %></p>
     </div>
-    <span class="<%= tournament_status_classes(@tournament) %> px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
-      <%= @tournament.status.humanize %>
-    </span>
+    <div class="flex items-center gap-3">
+      <span class="<%= tournament_status_classes(@tournament) %> px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
+        <%= @tournament.status.humanize %>
+      </span>
+      <% if logged_in? && current_user.id == @pool.creator_id %>
+        <%= button_to "Delete Pool", pool_path(@pool),
+              method: :delete,
+              class: "text-xs text-red-400 hover:text-red-300 font-medium transition-colors border border-red-800 hover:border-red-600 px-3 py-1 rounded-full",
+              data: { turbo_confirm: "Delete \"#{@pool.name}\"? This cannot be undone." } %>
+      <% end %>
+    </div>
   </header>
 
   <%# ── Two-column body ─────────────────────────────────────────────────── %>
