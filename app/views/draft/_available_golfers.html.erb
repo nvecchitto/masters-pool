@@ -44,8 +44,7 @@
                 <%= button_to "Pick",
                       pool_draft_pick_path(pool),
                       params: { golfer_id: golfer.id },
-                      class: "px-3 py-1 bg-green-700 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors",
-                      data: { turbo: false } %>
+                      class: "pick-btn px-3 py-1 bg-green-700 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" %>
               </td>
             </tr>
           <% end %>

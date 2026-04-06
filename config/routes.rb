@@ -1,5 +1,17 @@
 Rails.application.routes.draw do
+  # Auth
+  get    "login",    to: "sessions#new",       as: :login
+  post   "login",    to: "sessions#create"
+  delete "logout",   to: "sessions#destroy",   as: :logout
+  get    "sign_up",  to: "registrations#new",  as: :sign_up
+  post   "sign_up",  to: "registrations#create"
+
   resources :pools, only: %i[index create] do
+    member do
+      post :join
+      post :start_draft
+    end
+
     # GET  /pools/:pool_id/dashboard  → DashboardController#index
     get  "dashboard", to: "dashboard#index", as: :dashboard
 

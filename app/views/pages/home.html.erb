@@ -15,23 +15,94 @@
       <p class="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm"><%= alert %></p>
     <% end %>
 
-    <%# ── Existing Pools ──────────────────────────────────────────────── %>
-    <% if @pools.any? %>
+    <%# ── My Pools ────────────────────────────────────────────────────── %>
+    <% if @my_pools.any? %>
       <section>
-        <h2 class="text-lg font-semibold text-gray-200 mb-4">Your Pools</h2>
+        <h2 class="text-lg font-semibold text-gray-200 mb-4">My Pools</h2>
         <ul class="space-y-3">
-          <% @pools.each do |pool| %>
-            <li class="bg-gray-900 border border-gray-800 rounded-lg px-5 py-4 flex items-center justify-between">
+          <% @my_pools.each do |pool| %>
+            <li class="bg-gray-900 border border-gray-800 rounded-lg px-5 py-4">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="font-medium text-white"><%= pool.name %></p>
+                  <p class="text-sm text-gray-400"><%= pool.tournament.name %></p>
+                  <p class="text-xs text-gray-500 mt-1">
+                    <%= pool.teams.size %><% if pool.max_participants.present? %>/<%= pool.max_participants %><% end %> joined
+                    &middot;
+                    <% if pool.draft_status == "predraft" %>
+                      <span class="text-yellow-400">Waiting for players</span>
+                    <% elsif pool.draft_status == "drafting" %>
+                      <span class="text-blue-400">Draft in progress</span>
+                    <% else %>
+                      <span class="text-green-400">Draft complete</span>
+                    <% end %>
+                  </p>
+                </div>
+                <div class="flex flex-col items-end gap-2 shrink-0">
+                  <% if pool.draft_status == "predraft" %>
+                    <% if logged_in? && current_user.id == pool.creator_id %>
+                      <%= button_to "Start Draft",
+                            start_draft_pool_path(pool),
+                            class: "text-xs bg-green-700 hover:bg-green-600 text-white font-medium px-3 py-1.5 rounded transition-colors",
+                            data: { turbo: false } %>
+                    <% else %>
+                      <span class="text-xs text-gray-500 italic">Waiting for creator to start…</span>
+                    <% end %>
+                  <% else %>
+                    <div class="flex gap-3">
+                      <%= link_to "Draft", pool_draft_path(pool),
+                            class: "text-sm text-amber-400 hover:text-amber-300 font-medium transition-colors" %>
+                      <%= link_to "Dashboard →", pool_dashboard_path(pool),
+                            class: "text-sm text-green-400 hover:text-green-300 font-medium transition-colors" %>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+              <%# Participants list %>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <% pool.teams.each do |team| %>
+                  <span class="text-xs bg-gray-800 border border-gray-700 text-gray-300 px-2 py-0.5 rounded-full">
+                    <%= team.participant.name %>
+                    <% if team.participant_id == pool.creator_id %>
+                      <span class="text-yellow-500">★</span>
+                    <% end %>
+                  </span>
+                <% end %>
+                <% if pool.max_participants.present? && pool.teams.size < pool.max_participants %>
+                  <% (pool.max_participants - pool.teams.size).times do %>
+                    <span class="text-xs bg-gray-800/50 border border-dashed border-gray-700 text-gray-600 px-2 py-0.5 rounded-full">open slot</span>
+                  <% end %>
+                <% end %>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
+    <%# ── Open Pools (joinable) ───────────────────────────────────────── %>
+    <% if @open_pools.any? %>
+      <section>
+        <h2 class="text-lg font-semibold text-gray-200 mb-4">Open Pools</h2>
+        <ul class="space-y-3">
+          <% @open_pools.each do |pool| %>
+            <li class="bg-gray-900 border border-gray-800 rounded-lg px-5 py-4 flex items-center justify-between gap-4">
               <div>
                 <p class="font-medium text-white"><%= pool.name %></p>
                 <p class="text-sm text-gray-400"><%= pool.tournament.name %></p>
+                <p class="text-xs text-gray-500 mt-1">
+                  <%= pool.teams.size %>/<%= pool.max_participants %> joined
+                </p>
               </div>
-              <div class="flex gap-4">
-                <%= link_to "Draft", pool_draft_path(pool),
-                      class: "text-sm text-amber-400 hover:text-amber-300 font-medium transition-colors" %>
-                <%= link_to "Dashboard →", pool_dashboard_path(pool),
-                      class: "text-sm text-green-400 hover:text-green-300 font-medium transition-colors" %>
-              </div>
+              <% if logged_in? %>
+                <%= button_to "Join Pool",
+                      join_pool_path(pool),
+                      class: "text-sm bg-green-700 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors shrink-0",
+                      data: { turbo: false } %>
+              <% else %>
+                <%= link_to "Log in to join", login_path,
+                      class: "text-sm text-green-400 hover:text-green-300 font-medium shrink-0" %>
+              <% end %>
             </li>
           <% end %>
         </ul>
@@ -41,6 +112,18 @@
     <%# ── Create a Pool ───────────────────────────────────────────────── %>
     <section class="bg-gray-900 border border-gray-800 rounded-xl p-6">
       <h2 class="text-base font-semibold text-gray-200 mb-5">Create a Pool</h2>
+
+      <% unless logged_in? %>
+        <div class="bg-yellow-900/30 border border-yellow-700 rounded-lg px-4 py-3 mb-5 flex items-center justify-between gap-4">
+          <p class="text-yellow-300 text-sm">You must be logged in to create a pool.</p>
+          <div class="flex gap-3 shrink-0">
+            <%= link_to "Log in", login_path,
+                  class: "text-xs bg-green-700 hover:bg-green-600 text-white font-medium px-3 py-1.5 rounded transition-colors" %>
+            <%= link_to "Sign up", sign_up_path,
+                  class: "text-xs text-green-400 hover:text-green-300 font-medium" %>
+          </div>
+        </div>
+      <% end %>
 
       <% if @api_error %>
         <p class="text-sm text-red-400 bg-red-900/30 border border-red-800 rounded-lg px-4 py-3 mb-4">
@@ -84,33 +167,33 @@
                 class: "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm" %>
         </div>
 
-        <%# Participants ─ dynamic list %>
+        <%# Max participants %>
         <div>
-          <div class="flex items-center justify-between mb-2">
-            <label class="text-xs text-gray-400">Participants <span class="text-gray-600">(draft order = entry order)</span></label>
-            <button type="button" id="add_participant"
-                    class="text-xs text-green-400 hover:text-green-300 font-medium transition-colors">
-              + Add participant
-            </button>
-          </div>
+          <label class="block text-xs text-gray-400 mb-1">Number of participants</label>
+          <%= select_tag :max_participants,
+                options_for_select((2..12).map { |n| [n, n] }, 4),
+                class: "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500 text-sm" %>
+          <p class="text-xs text-gray-500 mt-1">You'll be added automatically. Others join from the home page.</p>
+        </div>
 
-          <div id="participants_list" class="space-y-2">
-            <%# Two starter rows %>
-            <% 2.times do |i| %>
-              <div class="participant-row flex gap-2 items-center">
-                <span class="text-xs text-gray-600 w-4 text-right participant-index"><%= i + 1 %></span>
-                <%= text_field_tag "participants[][name]", nil,
-                      placeholder: "Name",
-                      class: "flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm" %>
-                <%= email_field_tag "participants[][email]", nil,
-                      placeholder: "Email (optional)",
-                      class: "flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm" %>
-                <button type="button"
-                        class="remove-participant text-gray-600 hover:text-red-400 transition-colors text-lg leading-none px-1"
-                        title="Remove">×</button>
-              </div>
-            <% end %>
-          </div>
+        <%# Golfers per team %>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Golfers per team</label>
+          <%= select_tag :golfers_per_team,
+                options_for_select((1..8).map { |n| [n, n] }, 5),
+                class: "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500 text-sm" %>
+        </div>
+
+        <%# Cut penalty %>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Penalty per round after cut</label>
+          <%= select_tag :cut_penalty,
+                options_for_select(
+                  (0..10).map { |n| [n == 0 ? "No penalty (0)" : "+#{n} strokes", n] },
+                  4
+                ),
+                class: "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500 text-sm" %>
+          <p class="text-xs text-gray-500 mt-1">Added per unplayed round for golfers who miss the cut, WD, or DQ.</p>
         </div>
 
         <button type="submit"
@@ -137,36 +220,4 @@
     sel.addEventListener("change", syncTournament);
     syncTournament();
   <% end %>
-
-  <%# ── Participants: add / remove rows dynamically ── %>
-  function reindex() {
-    document.querySelectorAll(".participant-index").forEach((el, i) => {
-      el.textContent = i + 1;
-    });
-  }
-
-  document.getElementById("add_participant").addEventListener("click", function() {
-    const list = document.getElementById("participants_list");
-    const count = list.querySelectorAll(".participant-row").length + 1;
-    const row = document.createElement("div");
-    row.className = "participant-row flex gap-2 items-center";
-    row.innerHTML = `
-      <span class="text-xs text-gray-600 w-4 text-right participant-index">${count}</span>
-      <input type="text"   name="participants[][name]"  placeholder="Name"             class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm" />
-      <input type="email"  name="participants[][email]" placeholder="Email (optional)"  class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm" />
-      <button type="button" class="remove-participant text-gray-600 hover:text-red-400 transition-colors text-lg leading-none px-1" title="Remove">×</button>
-    `;
-    list.appendChild(row);
-    row.querySelector("input").focus();
-  });
-
-  document.getElementById("participants_list").addEventListener("click", function(e) {
-    if (e.target.classList.contains("remove-participant")) {
-      const rows = document.querySelectorAll(".participant-row");
-      if (rows.length > 1) {
-        e.target.closest(".participant-row").remove();
-        reindex();
-      }
-    }
-  });
 </script>

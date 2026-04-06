@@ -3,7 +3,10 @@
 <%# Subscribe to live draft updates broadcast by DraftController#broadcast_draft_update %>
 <%= turbo_stream_from "pool_#{@pool.id}_draft" %>
 
-<div class="min-h-screen bg-gray-950 text-gray-100">
+<%# Embed current user's participant ID for client-side turn enforcement %>
+<meta name="current-participant-id" content="<%= current_user&.id %>">
+
+<div class="min-h-screen bg-gray-950 text-gray-100" id="draft-page">
 
   <%# ── Header ─────────────────────────────────────────────────────────── %>
   <header class="bg-green-900 border-b border-green-700 px-6 py-4 flex items-center justify-between">
@@ -25,42 +28,59 @@
         <%= render "current_picker", pool: @pool, current_team: @current_team %>
       </div>
 
+      <%# Login prompt if not logged in and draft is still going %>
+      <% if !logged_in? && !@pool.draft_complete? %>
+        <div class="bg-yellow-900/30 border border-yellow-700 rounded-lg px-5 py-4 flex items-center justify-between gap-4">
+          <p class="text-yellow-300 text-sm">Log in to pick when it's your turn.</p>
+          <div class="flex gap-3 shrink-0">
+            <%= link_to "Log in", login_path,
+                  class: "text-xs bg-green-700 hover:bg-green-600 text-white font-medium px-3 py-1.5 rounded transition-colors" %>
+            <%= link_to "Sign up", sign_up_path,
+                  class: "text-xs text-green-400 hover:text-green-300 font-medium" %>
+          </div>
+        </div>
+      <% end %>
+
       <%# Available Golfers — replaced by Turbo Stream on each pick %>
       <div id="available_golfers">
         <%= render "available_golfers", pool: @pool, golfers: @available %>
       </div>
     </div>
 
-    <%# ── RIGHT: Draft Board (all teams + their picks so far) ─────────── %>
+    <%# ── RIGHT: Draft Board ──────────────────────────────────────────── %>
     <div class="lg:w-2/5">
       <h2 class="text-base font-semibold text-gray-300 mb-3">Draft Board</h2>
-      <div class="space-y-3">
-        <% @teams.each do |team| %>
-          <div class="bg-gray-900 rounded-lg border border-gray-800 p-4">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="w-3 h-3 rounded-full <%= team.badge_color %>"></span>
-              <span class="font-medium text-white text-sm"><%= team.name %></span>
-              <span class="text-xs text-gray-400">(<%= team.participant.name %>)</span>
-              <span class="ml-auto text-xs text-gray-500">Pick <%= team.draft_order %></span>
-            </div>
-            <% if team.golfers.any? %>
-              <ul class="space-y-1">
-                <% team.golfers.each do |golfer| %>
-                  <li class="text-sm text-gray-300 flex items-center justify-between">
-                    <span><%= golfer.name %></span>
-                    <span class="<%= score_color_class(golfer.current_score) %> font-mono text-xs">
-                      <%= golfer.display_score %>
-                    </span>
-                  </li>
-                <% end %>
-              </ul>
-            <% else %>
-              <p class="text-xs text-gray-600 italic">No picks yet</p>
-            <% end %>
-          </div>
-        <% end %>
+      <div id="draft_board">
+        <%= render "draft_board", teams: @teams %>
       </div>
     </div>
 
   </div>
 </div>
+
+<%# ── Turn-based pick enforcement ─────────────────────────────────────── %>
+<script>
+(function() {
+  var myId = (document.querySelector("meta[name='current-participant-id']") || {}).content || "";
+
+  function updatePickButtons() {
+    var pickingEl = document.querySelector("[data-picking-participant-id]");
+    var pickingId = pickingEl ? pickingEl.dataset.pickingParticipantId : "";
+    var isMyTurn = myId.length > 0 && myId === pickingId;
+
+    document.querySelectorAll(".pick-btn").forEach(function(btn) {
+      btn.disabled = !isMyTurn;
+    });
+  }
+
+  // Run on load
+  updatePickButtons();
+
+  // Re-run after any Turbo Stream updates the current_picker or available_golfers
+  var observer = new MutationObserver(updatePickButtons);
+  var draftPage = document.getElementById("draft-page");
+  if (draftPage) {
+    observer.observe(draftPage, { childList: true, subtree: true });
+  }
+})();
+</script>

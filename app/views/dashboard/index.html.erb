@@ -18,22 +18,22 @@
   </header>
 
   <%# ── Two-column body ─────────────────────────────────────────────────── %>
-  <div class="flex flex-col lg:flex-row gap-0 h-[calc(100vh-73px)]">
+  <div class="flex flex-col lg:flex-row gap-0 lg:h-[calc(100vh-73px)]">
 
-    <%# ── LEFT: Team Standings (40%) ──────────────────────────────────── %>
-    <aside class="lg:w-2/5 border-r border-gray-800 overflow-y-auto">
+    <%# ── TOP on mobile / LEFT on desktop: Team Standings ─────────────── %>
+    <aside class="lg:w-2/5 border-b lg:border-b-0 lg:border-r border-gray-800 lg:overflow-y-auto">
       <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-white">Pool Standings</h2>
-        <span class="text-xs text-gray-400">Score includes +4/round penalty for cuts</span>
+        <span class="text-xs text-gray-400">Score includes +<%= @pool.cut_penalty %>/round penalty for cuts</span>
       </div>
 
       <div id="standings">
-        <%= render "standings", teams: @teams %>
+        <%= render "standings", teams: @teams, cut_penalty: @pool.cut_penalty %>
       </div>
     </aside>
 
-    <%# ── RIGHT: Full Leaderboard (60%) ───────────────────────────────── %>
-    <main class="lg:w-3/5 overflow-y-auto">
+    <%# ── BOTTOM on mobile / RIGHT on desktop: Full Leaderboard ─────── %>
+    <main class="lg:w-3/5 lg:overflow-y-auto">
       <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-white">Field Leaderboard</h2>
         <span class="text-xs text-gray-400">

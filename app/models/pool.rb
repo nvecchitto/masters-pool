@@ -4,10 +4,14 @@
 #
 #  id                  :bigint           not null, primary key
 #  current_pick_number :integer          default(1), not null
+#  cut_penalty         :integer          default(4), not null
 #  draft_status        :string           default("predraft"), not null
+#  golfers_per_team    :integer          default(5), not null
+#  max_participants    :integer
 #  name                :string           not null
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
+#  creator_id          :integer
 #  tournament_id       :bigint           not null
 #
 # Indexes
@@ -20,13 +24,27 @@
 #
 class Pool < ApplicationRecord
   belongs_to :tournament
+  belongs_to :creator, class_name: "Participant", optional: true
   has_many :teams, -> { order(:draft_order) }, dependent: :destroy
   has_many :participants, through: :teams
 
   validates :name, presence: true
   validates :draft_status, inclusion: { in: %w[predraft drafting complete] }
+  validates :max_participants, numericality: { greater_than: 1 }, allow_nil: true
+  validates :golfers_per_team, numericality: { greater_than: 0 }
+  validates :cut_penalty, numericality: { greater_than_or_equal_to: 0 }
 
-  GOLFERS_PER_TEAM = 5
+  def full?
+    max_participants.present? && teams.size >= max_participants
+  end
+
+  def joinable?
+    draft_status == "predraft" && !full?
+  end
+
+  def member?(participant)
+    participants.include?(participant)
+  end
 
   # Returns the Team whose turn it is to pick, or nil if draft is over.
   def current_draft_team
@@ -34,7 +52,7 @@ class Pool < ApplicationRecord
 
     ordered_teams = teams.to_a
     n = ordered_teams.size
-    total_picks = n * GOLFERS_PER_TEAM
+    total_picks = n * golfers_per_team
     return nil if current_pick_number > total_picks
 
     pick_index = current_pick_number - 1   # 0-based
@@ -54,7 +72,7 @@ class Pool < ApplicationRecord
   # Advance to the next pick. Marks draft complete when all picks are made.
   def advance_pick!
     n = teams.size
-    total_picks = n * GOLFERS_PER_TEAM
+    total_picks = n * golfers_per_team
     if current_pick_number >= total_picks
       update!(draft_status: "complete")
     else

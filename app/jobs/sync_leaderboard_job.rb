@@ -36,7 +36,7 @@ class SyncLeaderboardJob < ApplicationJob
         "pool_#{pool.id}_standings",
         target: "standings",
         partial: "dashboard/standings",
-        locals: { teams: pool.teams.includes(golfers: :tournament).sort_by(&:pool_score) }
+        locals: { teams: pool.teams.includes(golfers: :tournament).sort_by(&:pool_score), cut_penalty: pool.cut_penalty }
       )
 
       # Broadcast the updated full leaderboard panel.

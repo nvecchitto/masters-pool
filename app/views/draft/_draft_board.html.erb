@@ -1,0 +1,27 @@
+<%# locals: (teams:) %>
+<div class="space-y-3">
+  <% teams.each do |team| %>
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-3 h-3 rounded-full <%= team.badge_color %>"></span>
+        <span class="font-medium text-white text-sm"><%= team.name %></span>
+        <span class="text-xs text-gray-400">(<%= team.participant.name %>)</span>
+        <span class="ml-auto text-xs text-gray-500">Pick <%= team.draft_order %></span>
+      </div>
+      <% if team.golfers.any? %>
+        <ul class="space-y-1">
+          <% team.golfers.each do |golfer| %>
+            <li class="text-sm text-gray-300 flex items-center justify-between">
+              <span><%= golfer.name %></span>
+              <span class="<%= score_color_class(golfer.current_score) %> font-mono text-xs">
+                <%= golfer.display_score %>
+              </span>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-xs text-gray-600 italic">No picks yet</p>
+      <% end %>
+    </div>
+  <% end %>
+</div>

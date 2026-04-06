@@ -27,6 +27,11 @@ class DraftController < ApplicationController
       return
     end
 
+    unless current_user && current_user.id == @current_team.participant_id
+      redirect_to pool_draft_path(@pool), alert: "It's not your turn to pick."
+      return
+    end
+
     golfer = Golfer.find_by(id: params[:golfer_id],
                              tournament: @pool.tournament)
 
@@ -59,8 +64,7 @@ class DraftController < ApplicationController
           .by_position
   end
 
-  # Pushes the updated "current picker" and "available golfers" partials to
-  # every browser tab subscribed to this pool's draft channel.
+  # Pushes updated partials to every browser subscribed to this pool's draft channel.
   def broadcast_draft_update(pool)
     next_team = pool.current_draft_team
 
@@ -76,6 +80,13 @@ class DraftController < ApplicationController
       target: "available_golfers",
       partial: "draft/available_golfers",
       locals:  { pool: pool, golfers: available_golfers }
+    )
+
+    Turbo::StreamsChannel.broadcast_replace_to(
+      "pool_#{pool.id}_draft",
+      target: "draft_board",
+      partial: "draft/draft_board",
+      locals:  { teams: pool.teams.includes(:participant, golfers: :tournament) }
     )
   end
 end

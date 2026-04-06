@@ -38,11 +38,11 @@ class Golfer < ApplicationRecord
   scope :by_position, -> { order(Arel.sql("position ASC NULLS LAST, odds_to_win ASC NULLS LAST, current_score ASC")) }
 
   # Returns the effective score used in pool standings.
-  # Cut/WD golfers are penalized +4 per round they did not play.
-  def pool_score
+  # Cut/WD golfers are penalized +cut_penalty per round they did not play.
+  def pool_score(cut_penalty: 4)
     if cut_or_withdrawn?
       remaining = tournament.total_rounds - rounds_played
-      current_score + (4 * remaining)
+      current_score + (cut_penalty * remaining)
     else
       current_score
     end
@@ -56,8 +56,8 @@ class Golfer < ApplicationRecord
     current_score.positive? ? "+#{current_score}" : current_score.to_s
   end
 
-  def display_pool_score
-    s = pool_score
+  def display_pool_score(cut_penalty: 4)
+    s = pool_score(cut_penalty: cut_penalty)
     return "E" if s.zero?
     s.positive? ? "+#{s}" : s.to_s
   end

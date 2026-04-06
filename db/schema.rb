@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_05_000007) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_06_153644) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -35,6 +35,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_05_000007) do
     t.string "email", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "password_digest"
     t.index ["email"], name: "index_participants_on_email", unique: true
   end
 
@@ -45,6 +46,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_05_000007) do
     t.string "draft_status", default: "predraft", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "creator_id"
+    t.integer "max_participants"
+    t.integer "golfers_per_team", default: 5, null: false
+    t.integer "cut_penalty", default: 4, null: false
     t.index ["tournament_id"], name: "index_pools_on_tournament_id"
   end
 

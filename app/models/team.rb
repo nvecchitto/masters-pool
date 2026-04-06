@@ -32,12 +32,12 @@ class Team < ApplicationRecord
                           numericality: { greater_than: 0 },
                           uniqueness: { scope: :pool_id }
 
-  # Sum of each golfer's pool_score (with +4 penalty applied for cut/WD golfers).
+  # Sum of each golfer's pool_score using the pool's cut penalty.
   # Returns a large number when the team has no golfers yet so they sort last.
   def pool_score
     return 999 if golfers.none?
 
-    golfers.sum(&:pool_score)
+    golfers.sum { |g| g.pool_score(cut_penalty: pool.cut_penalty) }
   end
 
   # Formatted for display
@@ -48,7 +48,7 @@ class Team < ApplicationRecord
   end
 
   # True when this team has fewer than the maximum allowed golfers
-  def can_draft? = golfers.size < Pool::GOLFERS_PER_TEAM
+  def can_draft? = golfers.size < pool.golfers_per_team
 
   # Badge color class (Tailwind) — cycles through 8 distinct colors
   BADGE_COLORS = %w[

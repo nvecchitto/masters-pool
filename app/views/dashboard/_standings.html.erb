@@ -1,4 +1,4 @@
-<%# locals: (teams:) %>
+<%# locals: (teams:, cut_penalty: 4) %>
 <table class="w-full text-sm">
   <thead>
     <tr class="text-xs text-gray-400 uppercase tracking-wider border-b border-gray-800">
@@ -23,7 +23,7 @@
           <%# Mini roster -%>
           <% if team.golfers.any? %>
             <div class="mt-2 space-y-0.5 pl-4">
-              <% team.golfers.sort_by(&:pool_score).each do |golfer| %>
+              <% team.golfers.sort_by { |g| g.pool_score(cut_penalty: cut_penalty) }.each do |golfer| %>
                 <div class="flex items-center justify-between text-xs">
                   <span class="<%= golfer.cut_or_withdrawn? ? 'text-gray-500 line-through' : 'text-gray-300' %>">
                     <%= golfer.name %>
@@ -33,7 +33,7 @@
                       <%= golfer.display_score %>
                     </span>
                     <% if golfer.cut_or_withdrawn? %>
-                      <span class="text-red-400 font-mono">(pool: <%= golfer.display_pool_score %>)</span>
+                      <span class="text-red-400 font-mono">(pool: <%= golfer.display_pool_score(cut_penalty: cut_penalty) %>)</span>
                       <%= render "shared/status_badge", golfer: golfer %>
                     <% else %>
                       <span class="text-gray-500 text-xs">thru <%= golfer.thru %></span>
