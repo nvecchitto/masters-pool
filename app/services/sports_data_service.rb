@@ -118,7 +118,8 @@ class SportsDataService
         status:        parse_status(player),
         rounds_played: rounds_played,
         position:      player["Rank"].presence&.to_i,
-        odds_to_win:   player["OddsToWin"].presence
+        odds_to_win:   player["OddsToWin"].presence,
+        hole_scores:   extract_hole_scores(player)
       )
 
       golfer.save!
@@ -179,6 +180,32 @@ class SportsDataService
       elsif hole["WorseThanDoubleBogey"] then +4
       else 0
       end
+    end
+  end
+
+  # Builds a hash of round_number → { hole_number → outcome_string } for storage.
+  # Only holes with a recorded result are included. Outcome strings:
+  #   "double_eagle", "eagle", "birdie", "par", "bogey",
+  #   "double_bogey", "triple_bogey", "worse"
+  def extract_hole_scores(player)
+    player["Rounds"].to_a.each_with_object({}) do |round, rounds_hash|
+      holes_hash = round["Holes"].to_a.each_with_object({}) do |hole, h|
+        type = hole_type(hole)
+        h[hole["Number"].to_s] = type if type
+      end
+      rounds_hash[round["Number"].to_s] = holes_hash unless holes_hash.empty?
+    end
+  end
+
+  def hole_type(hole)
+    if    hole["DoubleEagle"]          then "double_eagle"
+    elsif hole["Eagle"]                then "eagle"
+    elsif hole["Birdie"]               then "birdie"
+    elsif hole["Bogey"]                then "bogey"
+    elsif hole["DoubleBogey"]          then "double_bogey"
+    elsif hole["TripleBogey"]          then "triple_bogey"
+    elsif hole["WorseThanDoubleBogey"] then "worse"
+    elsif hole["Par"]                  then "par"
     end
   end
 

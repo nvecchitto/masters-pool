@@ -12,6 +12,14 @@ class DashboardController < ApplicationController
     @golfer_team_map = build_golfer_team_map(@pool)
   end
 
+  def team_scorecard
+    @pool = Pool.includes(teams: { golfers: :tournament }).find(params[:pool_id])
+    @team = @pool.teams.includes(:participant, golfers: :tournament).find(params[:team_id])
+    @tournament = @pool.tournament
+    @teams = @pool.teams.sort_by(&:pool_score)
+    @golfers = @team.golfers.sort_by { |g| g.pool_score(cut_penalty: @pool.cut_penalty) }
+  end
+
   private
 
   def build_golfer_team_map(pool)

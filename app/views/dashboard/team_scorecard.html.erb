@@ -1,0 +1,142 @@
+<% content_for :title, "#{@team.name} — #{@pool.name}" %>
+
+<div class="min-h-screen bg-gray-950 text-gray-100">
+
+  <%# ── Header ── %>
+  <header class="bg-green-900 border-b border-green-700 px-6 py-4 flex items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-white"><%= @tournament.name %></h1>
+      <p class="text-sm text-green-300 mt-0.5"><%= @pool.name %></p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="<%= tournament_status_classes(@tournament) %> px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
+        <%= @tournament.status.humanize %>
+      </span>
+      <% if logged_in? && current_user.id == @pool.creator_id %>
+        <%= button_to "Delete Pool", pool_path(@pool),
+              method: :delete,
+              class: "text-xs text-red-400 hover:text-red-300 font-medium transition-colors border border-red-800 hover:border-red-600 px-3 py-1 rounded-full",
+              data: { turbo_confirm: "Delete \"#{@pool.name}\"? This cannot be undone." } %>
+      <% end %>
+    </div>
+  </header>
+
+  <%# ── Two-column body ── %>
+  <div class="flex flex-col lg:flex-row gap-0 lg:h-[calc(100vh-73px)]">
+
+    <%# ── LEFT: Pool Standings ── %>
+    <aside class="lg:w-2/5 border-b lg:border-b-0 lg:border-r border-gray-800 lg:overflow-y-auto">
+      <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-white">Pool Standings</h2>
+        <span class="text-xs text-gray-400">Score includes +<%= @pool.cut_penalty %>/round penalty for cuts</span>
+      </div>
+      <div id="standings">
+        <%= render "standings", teams: @teams, cut_penalty: @pool.cut_penalty, pool: @pool %>
+      </div>
+    </aside>
+
+    <%# ── RIGHT: Team Scorecard (in Turbo Frame so clicking a team swaps it) ── %>
+    <main class="lg:w-3/5 lg:overflow-y-auto">
+      <%= turbo_frame_tag "right_panel" do %>
+        <%# ── Scorecard header ── %>
+        <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between sticky top-0 bg-gray-950 z-10">
+          <div>
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="inline-block w-2.5 h-2.5 rounded-full <%= @team.badge_color %>"></span>
+              <h2 class="text-lg font-semibold text-white"><%= @team.name %></h2>
+            </div>
+            <p class="text-xs text-gray-400"><%= @team.participant.name %></p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="<%= score_color_class(@team.pool_score) %> font-mono font-bold text-lg">
+              <%= @team.display_pool_score %>
+            </span>
+            <%= link_to pool_dashboard_path(@pool),
+                  data: { turbo_frame: "right_panel" },
+                  class: "text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 px-3 py-1 rounded-full transition-colors" do %>
+              &larr; Leaderboard
+            <% end %>
+          </div>
+        </div>
+
+        <%# ── Legend ── %>
+        <div class="px-5 py-2 border-b border-gray-800 flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+          <span class="flex items-center gap-1.5">
+            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full border-2 border-yellow-400 outline outline-2 outline-offset-1 outline-yellow-400 text-yellow-400 text-[10px] font-bold leading-none">-2</span>
+            Eagle
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full border-2 border-yellow-400 text-yellow-400 text-[10px] font-bold leading-none">-1</span>
+            Birdie
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="inline-flex items-center justify-center w-5 h-5 border-2 border-blue-400 text-blue-400 text-[10px] font-bold leading-none">+1</span>
+            Bogey
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="inline-flex items-center justify-center w-5 h-5 border-2 border-blue-500 outline outline-2 outline-offset-1 outline-blue-500 text-blue-500 text-[10px] font-bold leading-none">+2</span>
+            Double+
+          </span>
+        </div>
+
+        <%# ── Golfer scorecards ── %>
+        <div class="divide-y divide-gray-800">
+          <% @golfers.each do |golfer| %>
+            <div class="px-5 py-4">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="<%= golfer.cut_or_withdrawn? ? 'text-gray-500 line-through' : 'text-white font-medium' %>">
+                    <%= golfer.name %>
+                  </span>
+                  <% if golfer.cut_or_withdrawn? %>
+                    <%= render "shared/status_badge", golfer: golfer %>
+                  <% end %>
+                </div>
+                <div class="flex items-center gap-3 text-xs">
+                  <span class="<%= score_color_class(golfer.current_score) %> font-mono font-semibold">
+                    <%= golfer.display_score %>
+                  </span>
+                  <% if golfer.cut_or_withdrawn? %>
+                    <span class="text-gray-500 font-mono">pool: <%= golfer.display_pool_score(cut_penalty: @pool.cut_penalty) %></span>
+                  <% else %>
+                    <span class="text-gray-500">thru <%= golfer.thru %></span>
+                  <% end %>
+                </div>
+              </div>
+
+              <% if golfer.hole_scores.present? %>
+                <div class="space-y-3">
+                  <% (1..@tournament.total_rounds).each do |round_num| %>
+                    <% holes = golfer.hole_scores[round_num.to_s] %>
+                    <% next if holes.blank? %>
+                    <div>
+                      <p class="text-xs text-gray-500 mb-1.5">Round <%= round_num %></p>
+                      <% [[1..9, "Out"], [10..18, "In"]].each do |hole_range, label| %>
+                        <div class="flex items-center gap-1 mb-1">
+                          <span class="text-[10px] text-gray-600 w-6 shrink-0"><%= label %></span>
+                          <% hole_range.each do |hole_num| %>
+                            <% type = holes[hole_num.to_s] %>
+                            <% if type %>
+                              <span class="<%= hole_score_classes(type) %>" title="Hole <%= hole_num %>: <%= type.humanize %>">
+                                <%= hole_score_label(type) %>
+                              </span>
+                            <% else %>
+                              <span class="inline-flex items-center justify-center w-7 h-7 text-xs text-gray-700 font-mono">—</span>
+                            <% end %>
+                          <% end %>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              <% else %>
+                <p class="text-xs text-gray-600 italic">No hole data available yet</p>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </main>
+
+  </div>
+</div>

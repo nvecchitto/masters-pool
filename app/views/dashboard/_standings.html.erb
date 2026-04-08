@@ -1,4 +1,4 @@
-<%# locals: (teams:, cut_penalty: 4) %>
+<%# locals: (teams:, cut_penalty: 4, pool: nil) %>
 <table class="w-full text-sm">
   <thead>
     <tr class="text-xs text-gray-400 uppercase tracking-wider border-b border-gray-800">
@@ -9,13 +9,23 @@
   </thead>
   <tbody class="divide-y divide-gray-800">
     <% teams.each_with_index do |team, idx| %>
-      <tr class="hover:bg-gray-800/50 transition-colors group">
+      <tr class="hover:bg-gray-800/50 transition-colors group cursor-pointer"
+          onclick="document.getElementById('scorecard-link-<%= team.id %>').click()">
         <td class="px-5 py-3 text-gray-400 font-mono text-xs"><%= idx + 1 %></td>
         <td class="px-5 py-3">
           <div class="flex items-center gap-2">
             <span class="inline-block w-2.5 h-2.5 rounded-full <%= team.badge_color %>"></span>
             <div>
-              <p class="font-medium text-white"><%= team.name %></p>
+              <% if pool %>
+                <%= link_to pool_team_scorecard_path(pool, team),
+                      id: "scorecard-link-#{team.id}",
+                      data: { turbo_frame: "right_panel" },
+                      class: "font-medium text-white hover:text-green-300 transition-colors" do %>
+                  <%= team.name %>
+                <% end %>
+              <% else %>
+                <p class="font-medium text-white"><%= team.name %></p>
+              <% end %>
               <p class="text-xs text-gray-400"><%= team.participant.name %></p>
             </div>
           </div>

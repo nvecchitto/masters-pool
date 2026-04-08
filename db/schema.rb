@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_08_200655) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_08_204115) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -26,6 +26,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_08_200655) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "odds_to_win", precision: 8, scale: 2
+    t.jsonb "hole_scores", default: {}
     t.index ["tournament_id", "sportsdata_id"], name: "index_golfers_on_tournament_id_and_sportsdata_id", unique: true
     t.index ["tournament_id"], name: "index_golfers_on_tournament_id"
   end

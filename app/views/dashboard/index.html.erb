@@ -36,26 +36,28 @@
       </div>
 
       <div id="standings">
-        <%= render "standings", teams: @teams, cut_penalty: @pool.cut_penalty %>
+        <%= render "standings", teams: @teams, cut_penalty: @pool.cut_penalty, pool: @pool %>
       </div>
     </aside>
 
     <%# ── BOTTOM on mobile / RIGHT on desktop: Full Leaderboard ─────── %>
     <main class="lg:w-3/5 lg:overflow-y-auto">
-      <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-white">Field Leaderboard</h2>
-        <span class="text-xs text-gray-400">
-          <%= @golfers.count %> players &middot;
-          <%= @drafted_ids.size %> drafted
-        </span>
-      </div>
+      <%= turbo_frame_tag "right_panel" do %>
+        <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between sticky top-0 bg-gray-950 z-10">
+          <h2 class="text-lg font-semibold text-white">Field Leaderboard</h2>
+          <span class="text-xs text-gray-400">
+            <%= @golfers.count %> players &middot;
+            <%= @drafted_ids.size %> drafted
+          </span>
+        </div>
 
-      <div id="leaderboard">
-        <%= render "leaderboard",
-                   golfers:     @golfers,
-                   pool:        @pool,
-                   drafted_ids: @drafted_ids %>
-      </div>
+        <div id="leaderboard">
+          <%= render "leaderboard",
+                     golfers:     @golfers,
+                     pool:        @pool,
+                     drafted_ids: @drafted_ids %>
+        </div>
+      <% end %>
     </main>
 
   </div>

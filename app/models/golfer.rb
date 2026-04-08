@@ -4,6 +4,7 @@
 #
 #  id            :bigint           not null, primary key
 #  current_score :integer          default(0), not null
+#  hole_scores   :jsonb
 #  name          :string           not null
 #  odds_to_win   :decimal(8, 2)
 #  position      :integer
