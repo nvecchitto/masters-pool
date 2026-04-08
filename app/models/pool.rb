@@ -51,7 +51,7 @@ class Pool < ApplicationRecord
   def current_draft_team
     return nil unless draft_status == "drafting"
 
-    ordered_teams = teams.to_a
+    ordered_teams = teams.sort_by(&:draft_order)
     n = ordered_teams.size
     total_picks = n * golfers_per_team
     return nil if current_pick_number > total_picks
@@ -82,4 +82,37 @@ class Pool < ApplicationRecord
   end
 
   def draft_complete? = draft_status == "complete"
+
+  # Auto-draft for every consecutive offline participant starting from the
+  # current pick. Stops when an online participant is up or the draft ends.
+  # "Online" = made a request within the last 2 minutes.
+  def auto_draft_while_offline!
+    reload
+    loop do
+      team = current_draft_team
+      break if team.nil?
+      participant = team.participant.reload
+      break if participant.last_active_at.present? &&
+               participant.last_active_at > 2.minutes.ago
+
+      best = best_available_golfer
+      break if best.nil?
+
+      TeamGolfer.create!(
+        team:        team,
+        golfer:      best,
+        pick_number: current_pick_number
+      )
+      advance_pick!
+    end
+  end
+
+  private
+
+  def best_available_golfer
+    Golfer.where(tournament: tournament)
+          .where.not(id: drafted_golfer_ids)
+          .order(Arel.sql("odds_to_win ASC NULLS LAST, position ASC NULLS LAST"))
+          .first
+  end
 end

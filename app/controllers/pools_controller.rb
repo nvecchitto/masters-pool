@@ -101,6 +101,8 @@ class PoolsController < ApplicationController
       @pool.update!(draft_status: "drafting")
     end
 
+    @pool.auto_draft_while_offline!
+
     redirect_to pool_draft_path(@pool), notice: "Draft started! Good luck."
   rescue ActiveRecord::RecordInvalid => e
     redirect_to root_path, alert: e.message

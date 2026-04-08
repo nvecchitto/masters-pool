@@ -47,6 +47,7 @@ class DraftController < ApplicationController
     )
     @pool.advance_pick!
 
+    @pool.auto_draft_while_offline!
     broadcast_draft_update(@pool)
 
     redirect_to pool_draft_path(@pool)
@@ -64,7 +65,7 @@ class DraftController < ApplicationController
           .by_position
   end
 
-  # Pushes updated partials to every browser subscribed to this pool's draft channel.
+# Pushes updated partials to every browser subscribed to this pool's draft channel.
   def broadcast_draft_update(pool)
     next_team = pool.current_draft_team
 
