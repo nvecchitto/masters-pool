@@ -16,6 +16,7 @@
 #
 # Indexes
 #
+#  index_pools_on_name           (name) UNIQUE
 #  index_pools_on_tournament_id  (tournament_id)
 #
 # Foreign Keys
@@ -28,7 +29,7 @@ class Pool < ApplicationRecord
   has_many :teams, -> { order(:draft_order) }, dependent: :destroy
   has_many :participants, through: :teams
 
-  validates :name, presence: true
+  validates :name, presence: true, uniqueness: true
   validates :draft_status, inclusion: { in: %w[predraft drafting complete] }
   validates :max_participants, numericality: { greater_than: 1 }, allow_nil: true
   validates :golfers_per_team, numericality: { greater_than: 0 }
