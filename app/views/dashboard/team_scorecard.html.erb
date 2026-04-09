@@ -28,7 +28,7 @@
     <aside class="lg:w-2/5 border-b lg:border-b-0 lg:border-r border-gray-800 lg:overflow-y-auto">
       <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-white">Pool Standings</h2>
-        <span class="text-xs text-gray-400">Score includes +<%= @pool.cut_penalty %>/round penalty for cuts</span>
+        <span class="text-xs text-gray-400">Score includes +<%= @pool.cut_penalty %>/round penalty for cuts &bull; worst golfer score dropped</span>
       </div>
       <div id="standings">
         <%= render "standings", teams: @teams, cut_penalty: @pool.cut_penalty, pool: @pool %>
