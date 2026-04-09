@@ -112,7 +112,15 @@
                     <div>
                       <p class="text-xs text-gray-500 mb-1.5">Round <%= round_num %></p>
                       <% [[1..9, "Out"], [10..18, "In"]].each do |hole_range, label| %>
-                        <div class="flex items-center gap-1 mb-1">
+                        <%# Hole number header row %>
+                        <div class="flex items-center gap-1 mb-0.5">
+                          <span class="w-6 shrink-0"></span>
+                          <% hole_range.each do |hole_num| %>
+                            <span class="inline-flex items-center justify-center w-7 h-7 text-[10px] text-gray-500 font-mono"><%= hole_num %></span>
+                          <% end %>
+                        </div>
+                        <%# Score row %>
+                        <div class="flex items-center gap-1 mb-2">
                           <span class="text-[10px] text-gray-600 w-6 shrink-0"><%= label %></span>
                           <% hole_range.each do |hole_num| %>
                             <% type = holes[hole_num.to_s] %>
@@ -121,7 +129,7 @@
                                 <%= hole_score_label(type) %>
                               </span>
                             <% else %>
-                              <span class="inline-flex items-center justify-center w-7 h-7 text-xs text-gray-700 font-mono">—</span>
+                              <span class="inline-flex items-center justify-center w-7 h-7 border border-gray-700"></span>
                             <% end %>
                           <% end %>
                         </div>

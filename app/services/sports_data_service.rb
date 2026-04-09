@@ -146,7 +146,7 @@ class SportsDataService
         rounds_played: rounds_played,
         position:      player["Rank"].presence&.to_i,
         odds_to_win:   player["OddsToWin"].presence,
-        hole_scores:   extract_hole_scores(player)
+        hole_scores:   extract_hole_scores(player, completed_rounds, total_through)
       )
 
       golfer.save!
@@ -211,12 +211,21 @@ class SportsDataService
   end
 
   # Builds a hash of round_number → { hole_number → outcome_string } for storage.
-  # Only holes with a recorded result are included. Outcome strings:
-  #   "double_eagle", "eagle", "birdie", "par", "bogey",
+  # Only holes actually played are included — completed rounds use all 18 holes,
+  # the current in-progress round uses only the first total_through holes played.
+  # Outcome strings: "double_eagle", "eagle", "birdie", "par", "bogey",
   #   "double_bogey", "triple_bogey", "worse"
-  def extract_hole_scores(player)
+  def extract_hole_scores(player, completed_rounds, total_through)
     player["Rounds"].to_a.each_with_object({}) do |round, rounds_hash|
-      holes_hash = round["Holes"].to_a.each_with_object({}) do |hole, h|
+      holes_to_score = if completed_rounds.include?(round["Number"])
+                         round["Holes"].to_a
+                       elsif total_through&.positive?
+                         holes_in_play_order(round).first(total_through)
+                       else
+                         []
+                       end
+
+      holes_hash = holes_to_score.each_with_object({}) do |hole, h|
         type = hole_type(hole)
         h[hole["Number"].to_s] = type if type
       end

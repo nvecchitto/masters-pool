@@ -29,7 +29,7 @@ module ApplicationHelper
   # Eagles/double-eagles: double circle; birdies: single circle;
   # bogeys: single square; double-bogey+: double square.
   def hole_score_classes(type)
-    base = "inline-flex items-center justify-center w-7 h-7 text-xs font-bold font-mono"
+    base = "inline-flex items-center justify-center w-7 h-7 text-xs font-bold font-mono border border-gray-700"
     case type
     when "double_eagle"
       "#{base} rounded-full border-2 border-yellow-300 outline outline-2 outline-offset-2 outline-yellow-300 text-yellow-300"
