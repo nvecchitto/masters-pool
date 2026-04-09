@@ -58,6 +58,21 @@
   </div>
 </div>
 
+<%# ── Heartbeat: keep last_active_at fresh while on the draft page ─────── %>
+<% if logged_in? %>
+<script>
+(function() {
+  var url = "<%= draft_heartbeat_path(@pool) %>";
+  var token = document.querySelector("meta[name='csrf-token']")?.content;
+  function ping() {
+    fetch(url, { method: "POST", headers: { "X-CSRF-Token": token } });
+  }
+  ping(); // immediately on load
+  setInterval(ping, 60000); // then every 60 seconds
+})();
+</script>
+<% end %>
+
 <%# ── Turn-based pick enforcement ─────────────────────────────────────── %>
 <script>
 (function() {

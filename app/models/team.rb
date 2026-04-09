@@ -32,12 +32,21 @@ class Team < ApplicationRecord
                           numericality: { greater_than: 0 },
                           uniqueness: { scope: :pool_id }
 
-  # Sum of each golfer's pool_score using the pool's cut penalty.
+  # The golfer with the worst (highest) pool score — excluded from team score.
+  def dropped_golfer
+    return nil if golfers.none?
+
+    golfers.max_by { |g| g.pool_score(cut_penalty: pool.cut_penalty) }
+  end
+
+  # Sum of each golfer's pool_score using the pool's cut penalty,
+  # excluding the single golfer with the worst score.
   # Returns a large number when the team has no golfers yet so they sort last.
   def pool_score
     return 999 if golfers.none?
 
-    golfers.sum { |g| g.pool_score(cut_penalty: pool.cut_penalty) }
+    dropped = dropped_golfer
+    golfers.reject { |g| g == dropped }.sum { |g| g.pool_score(cut_penalty: pool.cut_penalty) }
   end
 
   # Formatted for display

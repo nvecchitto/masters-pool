@@ -21,8 +21,12 @@ default: &default
 
 
 development:
-  <<: *default
-  url: <%= ENV.fetch("DATABASE_URL").gsub("?", "_development?") %>
+  primary: &primary_development
+    <<: *default
+    url: <%= ENV.fetch("DATABASE_URL").gsub("?", "_development?") %>
+  cable:
+    <<: *primary_development
+    migrations_paths: db/cable_migrate
 
   # The specified database role being used to connect to PostgreSQL.
   # To create additional roles in PostgreSQL see `$ createuser --help`.

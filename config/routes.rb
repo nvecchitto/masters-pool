@@ -20,9 +20,10 @@ Rails.application.routes.draw do
 
     # GET  /pools/:pool_id/draft       → DraftController#show
     # POST /pools/:pool_id/draft/pick  → DraftController#pick
-    get  "draft",      to: "draft#show", as: :draft
-    post "draft/pick", to: "draft#pick", as: :draft_pick
-    post "draft/sync", to: "draft#sync", as: :draft_sync
+    get  "draft",           to: "draft#show",      as: :draft
+    post "draft/pick",      to: "draft#pick",      as: :draft_pick
+    post "draft/sync",      to: "draft#sync",      as: :draft_sync
+    post "draft/heartbeat", to: "draft#heartbeat", as: :draft_heartbeat
   end
 
   root "pages#home"

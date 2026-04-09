@@ -35,6 +35,33 @@ class SportsDataService
     upsert_golfers(tournament, body)
   end
 
+  # Updates status on local Tournament records to match the API.
+  # Sets "in_progress", "complete", or "upcoming" for each known tournament.
+  def sync_tournament_statuses(year = Time.current.year)
+    response = HTTP.timeout(10)
+                   .get("#{BASE_URL}/Tournaments/#{year}",
+                        params: { key: @api_key })
+
+    unless response.status.success?
+      raise ApiError, "Sportsdata.io returned #{response.status} fetching tournaments for #{year}"
+    end
+
+    response.parse(:json).reject { |t| t["Canceled"] }.each do |api_t|
+      tournament = Tournament.find_by(sportsdata_id: api_t["TournamentID"].to_s)
+      next unless tournament
+
+      new_status = if api_t["IsInProgress"]
+                     "in_progress"
+                   elsif api_t["IsOver"]
+                     "complete"
+                   else
+                     "upcoming"
+                   end
+
+      tournament.update!(status: new_status) if tournament.status != new_status
+    end
+  end
+
   # Returns upcoming / in-progress tournaments for the given year, sorted with
   # live tournaments first then by start date.
   def fetch_tournaments(year = Time.current.year)

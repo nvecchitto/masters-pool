@@ -8,6 +8,13 @@ class DraftController < ApplicationController
     @drafted_ids     = @pool.drafted_golfer_ids
   end
 
+  # POST /pools/:pool_id/draft/heartbeat
+  # Called every 60 s by the draft page JS to signal the user is still present.
+  def heartbeat
+    current_user&.update_columns(last_active_at: Time.current)
+    head :ok
+  end
+
   # POST /pools/:pool_id/draft/sync
   def sync
     begin

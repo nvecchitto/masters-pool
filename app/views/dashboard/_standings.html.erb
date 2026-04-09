@@ -32,18 +32,20 @@
 
           <%# Mini roster -%>
           <% if team.golfers.any? %>
+            <% dropped = team.dropped_golfer %>
             <div class="mt-2 space-y-0.5 pl-4">
               <% team.golfers.sort_by { |g| g.pool_score(cut_penalty: cut_penalty) }.each do |golfer| %>
+                <% is_dropped = golfer == dropped %>
                 <div class="flex items-center justify-between text-xs">
-                  <span class="<%= golfer.cut_or_withdrawn? ? 'text-gray-500 line-through' : 'text-gray-300' %>">
+                  <span class="<%= golfer.cut_or_withdrawn? ? 'text-gray-500 line-through' : (is_dropped ? 'text-gray-600' : 'text-gray-300') %>">
                     <%= golfer.name %>
                   </span>
                   <div class="flex items-center gap-2">
-                    <span class="<%= score_color_class(golfer.current_score) %> font-mono">
+                    <span class="<%= is_dropped ? 'text-gray-600 font-mono' : "#{score_color_class(golfer.current_score)} font-mono" %>">
                       <%= golfer.display_score %>
                     </span>
                     <% if golfer.cut_or_withdrawn? %>
-                      <span class="text-red-400 font-mono">(pool: <%= golfer.display_pool_score(cut_penalty: cut_penalty) %>)</span>
+                      <span class="<%= is_dropped ? 'text-gray-600 font-mono' : 'text-red-400 font-mono' %>">(pool: <%= golfer.display_pool_score(cut_penalty: cut_penalty) %>)</span>
                       <%= render "shared/status_badge", golfer: golfer %>
                     <% else %>
                       <span class="text-gray-500 text-xs">thru <%= golfer.thru %></span>

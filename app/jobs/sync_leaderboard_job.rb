@@ -8,6 +8,8 @@ class SyncLeaderboardJob < ApplicationJob
   queue_as :default
 
   def perform(tournament_id = nil)
+    SportsDataService.new.sync_tournament_statuses unless tournament_id
+
     tournaments = if tournament_id
                     Tournament.where(id: tournament_id)
                   else

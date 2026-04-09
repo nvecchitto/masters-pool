@@ -93,7 +93,7 @@ class Pool < ApplicationRecord
       break if team.nil?
       participant = team.participant.reload
       break if participant.last_active_at.present? &&
-               participant.last_active_at > 2.minutes.ago
+               participant.last_active_at > 3.minutes.ago
 
       best = best_available_golfer
       break if best.nil?
