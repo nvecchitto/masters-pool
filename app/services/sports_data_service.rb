@@ -11,13 +11,10 @@
 # IMPORTANT — score calculation:
 #   The player-level "TotalScore" field is a decimal projection, NOT the actual
 #   golf score (e.g. -10.2 when the real score is -17). Do not use it.
-#   For completed rounds: use PlayerTournamentHoleScoresFinal.TotalScore (integer,
-#   to-par). The API stops populating per-hole boolean fields once a round is
-#   officially over, so the boolean sum returns 0 for finished rounds.
-#   For the current round in progress: sum the boolean result fields on played
-#   holes: Birdie=-1, Eagle=-2, DoubleEagle=-3, Bogey=+1, DoubleBogey=+2,
-#   TripleBogey=+3, WorseThanDoubleBogey=+4.
-#   The hole-level "ToPar" field is unreliable (shows 0 for over-par holes).
+#   Actual scores are derived from the hole-level "ToPar" field, summed across
+#   all played holes. The boolean result fields (Birdie, Bogey, etc.) are
+#   unreliable for some holes in completed rounds and should not be used for
+#   scoring (use them only as display hints for the scorecard).
 #   Only rounds where IsRoundOver=true (tournament level) are treated as complete.
 
 class SportsDataService
@@ -160,11 +157,9 @@ class SportsDataService
     end
   end
 
-  # Calculates actual score and rounds played.
+  # Calculates actual score and rounds played from hole-level ToPar fields.
   #
-  # For completed rounds: uses PlayerTournamentHoleScoresFinal.TotalScore when
-  #   available (populated by the API once a round is officially over), falling
-  #   back to summing the boolean hole fields.
+  # For completed rounds: all 18 holes' ToPar values are summed.
   # For the current round in progress: only the first `total_through` holes
   #   in play order are summed (respecting BackNineStart).
   #
@@ -174,19 +169,7 @@ class SportsDataService
 
     # --- Completed rounds ---
     done = all_rounds.select { |r| completed_rounds.include?(r["Number"]) }
-
-    # PlayerTournamentHoleScoresFinal.TotalScore is the authoritative integer
-    # score for all completed rounds. The API stops populating the per-hole
-    # boolean fields once a round is officially over, so the boolean sum
-    # returns 0 ("E") for finished rounds. Use the finalized total when present.
-    final_data   = player["PlayerTournamentHoleScoresFinal"]
-    final_total  = final_data.is_a?(Hash) ? final_data["TotalScore"]&.to_i : nil
-
-    score = if final_total && done.any?
-              final_total
-            else
-              done.sum { |r| sum_holes(r["Holes"].to_a) }
-            end
+    score = done.sum { |r| sum_holes(r["Holes"].to_a) }
 
     # --- Current round in progress ---
     if total_through&.positive?
@@ -208,19 +191,12 @@ class SportsDataService
     order.filter_map { |n| by_number[n] }
   end
 
-  # Sums hole-level boolean result fields to get strokes relative to par.
+  # Sums hole-level ToPar values to get strokes relative to par.
+  # ToPar is more reliable than the boolean fields, which can be wrong for
+  # some holes in completed rounds (e.g. a bogey hole may have Bogey=false
+  # but ToPar=1 correctly set).
   def sum_holes(holes)
-    holes.sum do |hole|
-      if    hole["DoubleEagle"]          then -3
-      elsif hole["Eagle"]                then -2
-      elsif hole["Birdie"]               then -1
-      elsif hole["Bogey"]                then +1
-      elsif hole["DoubleBogey"]          then +2
-      elsif hole["TripleBogey"]          then +3
-      elsif hole["WorseThanDoubleBogey"] then +4
-      else 0
-      end
-    end
+    holes.sum { |hole| hole["ToPar"].to_i }
   end
 
   # Builds a hash of round_number → { hole_number → outcome_string } for storage.
@@ -247,14 +223,27 @@ class SportsDataService
   end
 
   def hole_type(hole)
-    if    hole["DoubleEagle"]          then "double_eagle"
-    elsif hole["Eagle"]                then "eagle"
-    elsif hole["Birdie"]               then "birdie"
-    elsif hole["Bogey"]                then "bogey"
-    elsif hole["DoubleBogey"]          then "double_bogey"
-    elsif hole["TripleBogey"]          then "triple_bogey"
-    elsif hole["WorseThanDoubleBogey"] then "worse"
-    elsif hole["Par"]                  then "par"
+    # Prefer explicit boolean fields; fall back to ToPar when they're absent.
+    return "double_eagle" if hole["DoubleEagle"]
+    return "eagle"        if hole["Eagle"]
+    return "birdie"       if hole["Birdie"]
+    return "bogey"        if hole["Bogey"]
+    return "double_bogey" if hole["DoubleBogey"]
+    return "triple_bogey" if hole["TripleBogey"]
+    return "worse"        if hole["WorseThanDoubleBogey"]
+    return "par"          if hole["IsPar"]
+
+    to_par = hole["ToPar"]
+    return nil if to_par.nil?
+    case to_par.to_i
+    when -3      then "double_eagle"
+    when -2      then "eagle"
+    when -1      then "birdie"
+    when 0       then "par"
+    when 1       then "bogey"
+    when 2       then "double_bogey"
+    when 3       then "triple_bogey"
+    else              "worse"
     end
   end
 
