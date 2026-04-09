@@ -9,13 +9,16 @@
 #   GET https://api.sportsdata.io/golf/v2/json/Leaderboard/{tournamentId}
 #
 # IMPORTANT — score calculation:
-#   The top-level "TotalScore" field returns a decimal projection value, NOT the
-#   actual golf score (e.g. -10.2 when the real score is -17).
-#   Actual scores are derived by summing the boolean result fields on each
-#   completed hole: Birdie=-1, Eagle=-2, DoubleEagle=-3, Bogey=+1,
-#   DoubleBogey=+2, TripleBogey=+3, WorseThanDoubleBogey=+4.
+#   The player-level "TotalScore" field is a decimal projection, NOT the actual
+#   golf score (e.g. -10.2 when the real score is -17). Do not use it.
+#   For completed rounds: use PlayerTournamentHoleScoresFinal.TotalScore (integer,
+#   to-par). The API stops populating per-hole boolean fields once a round is
+#   officially over, so the boolean sum returns 0 for finished rounds.
+#   For the current round in progress: sum the boolean result fields on played
+#   holes: Birdie=-1, Eagle=-2, DoubleEagle=-3, Bogey=+1, DoubleBogey=+2,
+#   TripleBogey=+3, WorseThanDoubleBogey=+4.
 #   The hole-level "ToPar" field is unreliable (shows 0 for over-par holes).
-#   Only holes from rounds where IsRoundOver=true (tournament level) are counted.
+#   Only rounds where IsRoundOver=true (tournament level) are treated as complete.
 
 class SportsDataService
   BASE_URL = "https://api.sportsdata.io/golf/v2/json"
@@ -157,23 +160,33 @@ class SportsDataService
     end
   end
 
-  # Calculates actual score and rounds played from hole-level boolean fields.
+  # Calculates actual score and rounds played.
   #
-  # For completed rounds: all 18 holes are summed.
+  # For completed rounds: uses PlayerTournamentHoleScoresFinal.TotalScore when
+  #   available (populated by the API once a round is officially over), falling
+  #   back to summing the boolean hole fields.
   # For the current round in progress: only the first `total_through` holes
   #   in play order are summed (respecting BackNineStart).
   #
   # Returns [score, rounds_played].
-  #
-  # Why booleans and not ToPar: the hole-level ToPar field is unreliable —
-  # it shows 0 for over-par holes. The boolean fields (Birdie, Eagle, Bogey…)
-  # correctly reflect the actual recorded outcome for each hole.
   def score_from_holes(player, completed_rounds, total_through)
     all_rounds = player["Rounds"].to_a
 
     # --- Completed rounds ---
     done = all_rounds.select { |r| completed_rounds.include?(r["Number"]) }
-    score = done.sum { |r| sum_holes(r["Holes"].to_a) }
+
+    # PlayerTournamentHoleScoresFinal.TotalScore is the authoritative integer
+    # score for all completed rounds. The API stops populating the per-hole
+    # boolean fields once a round is officially over, so the boolean sum
+    # returns 0 ("E") for finished rounds. Use the finalized total when present.
+    final_data   = player["PlayerTournamentHoleScoresFinal"]
+    final_total  = final_data.is_a?(Hash) ? final_data["TotalScore"]&.to_i : nil
+
+    score = if final_total && done.any?
+              final_total
+            else
+              done.sum { |r| sum_holes(r["Holes"].to_a) }
+            end
 
     # --- Current round in progress ---
     if total_through&.positive?
