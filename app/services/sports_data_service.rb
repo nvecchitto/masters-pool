@@ -134,19 +134,27 @@ class SportsDataService
         sportsdata_id: sportsdata_id
       )
 
-      # TotalThrough = holes completed in the current round (nil when not playing).
-      total_through = player["TotalThrough"].presence&.to_i
-      score, rounds_played = score_from_holes(player, completed_rounds, total_through)
+      # TotalThrough = holes completed in the current round.
+      # The API resets this to nil once a player finishes their round, even
+      # before the tournament-level IsRoundOver flag is set. Detect this so
+      # we can still score and display those players correctly.
+      total_through   = player["TotalThrough"].presence&.to_i
+      all_rounds      = player["Rounds"].to_a
+      live_round      = all_rounds.find { |r| !completed_rounds.include?(r["Number"]) }
+      round_finished  = live_round && total_through.nil? &&
+                        live_round["Holes"].to_a.any? { |h| !h["ToPar"].nil? }
+
+      score, rounds_played = score_from_holes(player, completed_rounds, total_through, live_round, round_finished)
 
       golfer.assign_attributes(
         name:          player["Name"].to_s.strip,
         current_score: score,
-        thru:          parse_thru(is_over, completed_rounds, total_through),
+        thru:          parse_thru(is_over, completed_rounds, total_through, round_finished),
         status:        parse_status(player),
         rounds_played: rounds_played,
         position:      player["Rank"].presence&.to_i,
         odds_to_win:   player["OddsToWin"].presence,
-        hole_scores:   extract_hole_scores(player, completed_rounds, total_through)
+        hole_scores:   extract_hole_scores(player, completed_rounds, total_through, live_round, round_finished)
       )
 
       golfer.save!
@@ -159,25 +167,30 @@ class SportsDataService
 
   # Calculates actual score and rounds played from hole-level ToPar fields.
   #
-  # For completed rounds: all 18 holes' ToPar values are summed.
-  # For the current round in progress: only the first `total_through` holes
-  #   in play order are summed (respecting BackNineStart).
+  # Completed rounds: all holes summed via ToPar.
+  # Live round mid-play (total_through > 0): first N holes in play order.
+  # Live round finished (round_finished=true): all 18 holes — the API resets
+  #   TotalThrough to nil when a player completes their round before IsRoundOver
+  #   is set at the tournament level.
   #
   # Returns [score, rounds_played].
-  def score_from_holes(player, completed_rounds, total_through)
+  def score_from_holes(player, completed_rounds, total_through, live_round, round_finished)
     all_rounds = player["Rounds"].to_a
 
     # --- Completed rounds ---
-    done = all_rounds.select { |r| completed_rounds.include?(r["Number"]) }
+    done  = all_rounds.select { |r| completed_rounds.include?(r["Number"]) }
     score = done.sum { |r| sum_holes(r["Holes"].to_a) }
 
-    # --- Current round in progress ---
-    if total_through&.positive?
-      live_round = all_rounds.find { |r| !completed_rounds.include?(r["Number"]) }
-      if live_round
-        played = holes_in_play_order(live_round).first(total_through)
-        score += sum_holes(played)
-      end
+    # --- Live round ---
+    if live_round
+      played = if total_through&.positive?
+                 holes_in_play_order(live_round).first(total_through)
+               elsif round_finished
+                 live_round["Holes"].to_a
+               else
+                 []
+               end
+      score += sum_holes(played)
     end
 
     [score, done.size]
@@ -200,16 +213,18 @@ class SportsDataService
   end
 
   # Builds a hash of round_number → { hole_number → outcome_string } for storage.
-  # Only holes actually played are included — completed rounds use all 18 holes,
-  # the current in-progress round uses only the first total_through holes played.
-  # Outcome strings: "double_eagle", "eagle", "birdie", "par", "bogey",
-  #   "double_bogey", "triple_bogey", "worse"
-  def extract_hole_scores(player, completed_rounds, total_through)
+  def extract_hole_scores(player, completed_rounds, total_through, live_round, round_finished)
     player["Rounds"].to_a.each_with_object({}) do |round, rounds_hash|
       holes_to_score = if completed_rounds.include?(round["Number"])
                          round["Holes"].to_a
-                       elsif total_through&.positive?
-                         holes_in_play_order(round).first(total_through)
+                       elsif live_round && round["Number"] == live_round["Number"]
+                         if total_through&.positive?
+                           holes_in_play_order(live_round).first(total_through)
+                         elsif round_finished
+                           live_round["Holes"].to_a
+                         else
+                           []
+                         end
                        else
                          []
                        end
@@ -251,8 +266,9 @@ class SportsDataService
   #   "F"     – round or tournament finished
   #   "1"-"17" – current hole mid-round
   #   "-"     – not yet started / pre-tournament
-  def parse_thru(is_over, completed_rounds, total_through)
+  def parse_thru(is_over, completed_rounds, total_through, round_finished)
     return "F" if is_over
+    return "F" if round_finished
     return "F" if total_through.nil? && completed_rounds.any?
     return "-" if total_through.nil?
     total_through == 18 ? "F" : total_through.to_s
