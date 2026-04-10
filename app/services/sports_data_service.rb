@@ -140,21 +140,31 @@ class SportsDataService
       # we can still score and display those players correctly.
       total_through   = player["TotalThrough"].presence&.to_i
       all_rounds      = player["Rounds"].to_a
-      live_round      = all_rounds.find { |r| !completed_rounds.include?(r["Number"]) }
+
+      # The tournament-level IsRoundOver flag is sometimes delayed by the API
+      # even after a new round has begun. Augment completed_rounds with a
+      # per-player check: if a player has ToPar values for all 18 holes in a
+      # round, treat that round as complete for scoring purposes.
+      player_completed = all_rounds.select { |r| r["Holes"].to_a.count { |h| !h["ToPar"].nil? } >= 18 }
+                                   .map { |r| r["Number"] }
+                                   .to_set
+      effective_completed = completed_rounds | player_completed
+
+      live_round      = all_rounds.find { |r| !effective_completed.include?(r["Number"]) }
       round_finished  = live_round && total_through.nil? &&
                         live_round["Holes"].to_a.any? { |h| !h["ToPar"].nil? }
 
-      score, rounds_played = score_from_holes(player, completed_rounds, total_through, live_round, round_finished)
+      score, rounds_played = score_from_holes(player, effective_completed, total_through, live_round, round_finished)
 
       golfer.assign_attributes(
         name:          player["Name"].to_s.strip,
         current_score: score,
-        thru:          parse_thru(is_over, completed_rounds, total_through, round_finished),
+        thru:          parse_thru(is_over, effective_completed, total_through, round_finished),
         status:        parse_status(player),
         rounds_played: rounds_played,
         position:      player["Rank"].presence&.to_i,
         odds_to_win:   player["OddsToWin"].presence,
-        hole_scores:   extract_hole_scores(player, completed_rounds, total_through, live_round, round_finished)
+        hole_scores:   extract_hole_scores(player, effective_completed, total_through, live_round, round_finished)
       )
 
       golfer.save!
