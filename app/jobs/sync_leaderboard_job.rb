@@ -8,7 +8,16 @@ class SyncLeaderboardJob < ApplicationJob
   queue_as :default
 
   def perform(tournament_id = nil)
-    SportsDataService.new.sync_tournament_statuses unless tournament_id
+    unless tournament_id
+      begin
+        SportsDataService.new.sync_tournament_statuses
+      rescue SportsDataService::ApiError => e
+        Rails.logger.error("[SyncLeaderboardJob] API error syncing tournament statuses: #{e.message}")
+      rescue KeyError => e
+        Rails.logger.error("[SyncLeaderboardJob] #{e.message}")
+        return  # No key set — don't hammer the API on every retry
+      end
+    end
 
     tournaments = if tournament_id
                     Tournament.where(id: tournament_id)
