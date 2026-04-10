@@ -8,7 +8,14 @@ class SyncLeaderboardJob < ApplicationJob
   queue_as :default
 
   def perform(tournament_id = nil)
+    # When called by the recurring scheduler (no specific tournament), skip
+    # the API entirely if no one has the dashboard open in the last 5 minutes.
     unless tournament_id
+      unless Rails.cache.read("dashboard_viewers_present")
+        Rails.logger.info("[SyncLeaderboardJob] No active viewers — skipping API call")
+        return
+      end
+
       begin
         SportsDataService.new.sync_tournament_statuses
       rescue SportsDataService::ApiError => e

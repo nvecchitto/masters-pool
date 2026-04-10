@@ -12,6 +12,14 @@ class DashboardController < ApplicationController
     @golfer_team_map = build_golfer_team_map(@pool)
   end
 
+  # POST /pools/:pool_id/dashboard/heartbeat
+  # Called every 2 minutes by the dashboard page to signal a viewer is present.
+  # SyncLeaderboardJob skips the API when no heartbeat has been received recently.
+  def heartbeat
+    Rails.cache.write("dashboard_viewers_present", true, expires_in: 5.minutes)
+    head :ok
+  end
+
   def team_scorecard
     @pool = Pool.includes(teams: { golfers: :tournament }).find(params[:pool_id])
     @team = @pool.teams.includes(:participant, golfers: :tournament).find(params[:team_id])

@@ -4,6 +4,10 @@
 <%= turbo_stream_from "pool_#{@pool.id}_standings" %>
 <%= turbo_stream_from "pool_#{@pool.id}_leaderboard" %>
 
+<%# Heartbeat: tells SyncLeaderboardJob that a real viewer is present %>
+<div data-controller="dashboard-presence"
+     data-dashboard-presence-url-value="<%= pool_dashboard_heartbeat_path(@pool) %>"></div>
+
 <div class="min-h-screen bg-gray-950 text-gray-100">
 
   <%# ── Header ─────────────────────────────────────────────────────────── %>

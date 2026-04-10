@@ -2,7 +2,7 @@ production:
   sync_leaderboard:
     class: SyncLeaderboardJob
     queue: default
-    schedule: every 1 minute
+    schedule: every 3 minutes
 
 # periodic_cleanup:
 #   class: CleanSoftDeletedRecordsJob
