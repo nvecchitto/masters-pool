@@ -120,9 +120,11 @@ class SportsDataService
     is_over         = tournament_meta["IsOver"]
 
     # Round numbers marked complete at the tournament level.
+    # Normalize to strings — player-level round Numbers from the JSON come as
+    # strings in some API responses, causing a type-mismatch against integers.
     completed_rounds = tournament_meta["Rounds"].to_a
                                                 .select { |r| r["IsRoundOver"] }
-                                                .map    { |r| r["Number"] }
+                                                .map    { |r| r["Number"].to_s }
                                                 .to_set
 
     body["Players"].filter_map do |player|
@@ -141,16 +143,19 @@ class SportsDataService
       total_through   = player["TotalThrough"].presence&.to_i
       all_rounds      = player["Rounds"].to_a
 
-      # The tournament-level IsRoundOver flag is sometimes delayed by the API
-      # even after a new round has begun. Augment completed_rounds with a
-      # per-player check: if a player has ToPar values for all 18 holes in a
-      # round, treat that round as complete for scoring purposes.
-      player_completed = all_rounds.select { |r| r["Holes"].to_a.count { |h| !h["ToPar"].nil? } >= 18 }
-                                   .map { |r| r["Number"] }
-                                   .to_set
+      # The tournament-level IsRoundOver flag can be delayed by the API even
+      # after a new round has begun. Detect completed rounds per-player:
+      # if a player has any ToPar data in round N, all lower-numbered rounds
+      # that also have data are complete (they played past them).
+      rounds_with_data  = all_rounds.select { |r| r["Holes"].to_a.any? { |h| !h["ToPar"].nil? } }
+      max_round_num     = rounds_with_data.map { |r| r["Number"].to_i }.max || 0
+      player_completed  = rounds_with_data
+                            .select { |r| r["Number"].to_i < max_round_num }
+                            .map    { |r| r["Number"].to_s }
+                            .to_set
       effective_completed = completed_rounds | player_completed
 
-      live_round      = all_rounds.find { |r| !effective_completed.include?(r["Number"]) }
+      live_round      = all_rounds.find { |r| !effective_completed.include?(r["Number"].to_s) }
       round_finished  = live_round && total_through.nil? &&
                         live_round["Holes"].to_a.any? { |h| !h["ToPar"].nil? }
 
@@ -188,7 +193,7 @@ class SportsDataService
     all_rounds = player["Rounds"].to_a
 
     # --- Completed rounds ---
-    done  = all_rounds.select { |r| completed_rounds.include?(r["Number"]) }
+    done  = all_rounds.select { |r| completed_rounds.include?(r["Number"].to_s) }
     score = done.sum { |r| sum_holes(r["Holes"].to_a) }
 
     # --- Live round ---
@@ -225,9 +230,9 @@ class SportsDataService
   # Builds a hash of round_number → { hole_number → outcome_string } for storage.
   def extract_hole_scores(player, completed_rounds, total_through, live_round, round_finished)
     player["Rounds"].to_a.each_with_object({}) do |round, rounds_hash|
-      holes_to_score = if completed_rounds.include?(round["Number"])
+      holes_to_score = if completed_rounds.include?(round["Number"].to_s)
                          round["Holes"].to_a
-                       elsif live_round && round["Number"] == live_round["Number"]
+                       elsif live_round && round["Number"].to_s == live_round["Number"].to_s
                          if total_through&.positive?
                            holes_in_play_order(live_round).first(total_through)
                          elsif round_finished
